@@ -190,7 +190,7 @@ const ProductListPage: React.FC = () => {
           <Spin spinning={loading}>
             <div className={`${styles['product-list']} ${viewOption === 'list' ? styles['product-list--list-view'] : ''}`}>
               {products.map(product => (
-                <ProductCard key={product._id} product={product} onViewDetail={() => { /* Handle view detail */ }} onAddToCart={handleAddToCart} />
+                <ProductCard key={product._id} product={product} />
               ))}
               {products.length === 0 && !loading && (
                 <div className="no-products-found">Không tìm thấy sản phẩm nào.</div>

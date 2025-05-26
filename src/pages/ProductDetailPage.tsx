@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
 import { Product } from '../api/types'; // Import Product type
-import { Spin, message, Typography, Image, Descriptions, Space, Button, notification } from 'antd';
+import { Typography, Spin, Image as AntdImage, Descriptions, Space, Button, notification, Card, message } from 'antd';
 import { formatCurrency } from '../utils/format';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const { Title, Paragraph } = Typography;
 
 const ProductDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>(); // Get product ID from URL
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false); // State for add to cart loading
 
   useEffect(() => {
@@ -68,6 +72,10 @@ const ProductDetailPage: React.FC = () => {
     }
   };
 
+  const handleRegisterConsultation = () => {
+    navigate('/dich-vu'); // Navigate to the services page
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
@@ -85,58 +93,117 @@ const ProductDetailPage: React.FC = () => {
     );
   }
 
-  // Display product details
+  const allImages = product.List_Image ? [product.Main_Image, ...product.List_Image] : [product.Main_Image];
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? allImages.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === allImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
   return (
-    <div className="product-detail-page">
-      <div className="product-detail-page__container">
-        <Title level={2}>{product.Product_Name}</Title>
-
-        <div className="product-detail-page__main-info">
-          <div className="product-detail-page__image">
-            <Image src={product.Main_Image} alt={product.Product_Name} />
-            {/* Add gallery of List_Image if available */}
+    <div className="container mx-auto px-4 py-8">
+      <Card style={{ boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Image Gallery */}
+          <div className="relative">
+            <div className="relative h-96 rounded-lg overflow-hidden">
+              <AntdImage
+                src={allImages[currentImageIndex]}
+                alt={product.Product_Name}
+                className="w-full h-full object-cover"
+                preview={true}
+              />
+              {allImages.length > 1 && (
+                <>
+                  <button
+                    onClick={handlePrevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 z-10"
+                  >
+                    <FaChevronLeft />
+                  </button>
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 z-10"
+                  >
+                    <FaChevronRight />
+                  </button>
+                </>
+              )}
+            </div>
+            {allImages.length > 1 && (
+              <div className="flex space-x-2 mt-4 overflow-x-auto">
+                {allImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`w-20 h-20 rounded-md overflow-hidden flex-shrink-0 border-2 ${currentImageIndex === index ? 'border-primary-600' : 'border-transparent'}`}
+                  >
+                    <img
+                      src={image}
+                      alt={`${product.Product_Name} - ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="product-detail-page__details">
-            <Paragraph strong>Giá: {formatCurrency(product.Price)}</Paragraph>
-            <Paragraph>Tồn kho: {product.Stock}</Paragraph>
-            <Paragraph>Trạng thái: {product.Status === 'available' ? 'Còn hàng' : 'Hết hàng'}</Paragraph>
 
-            <Title level={4}>Mô tả:</Title>
-            <Paragraph>{product.Description || 'Đang cập nhật...'}</Paragraph>
+          {/* Product Info */}
+          <div className="flex flex-col">
+            <Title level={2} className="!mt-0 mb-2">{product.Product_Name}</Title>
+            <Typography.Text strong className="text-2xl text-primary-600 mb-4">{formatCurrency(product.Price)}</Typography.Text>
 
-            <Space size="middle" style={{ marginTop: '20px' }}>
-              {/* Add to Cart button */}
+            {/* Added vertical spacing between sections */}
+            <div className="mt-8">
+              <Title level={4} className="mb-2">Mô tả</Title>
+              <Paragraph>{product.Description || 'Đang cập nhật...'}</Paragraph>
+            </div>
+
+            <div className="mt-8">
+              <Title level={4} className="mb-2">Thông số kỹ thuật</Title>
+              {product.Specifications && Object.keys(product.Specifications).length > 0 ? (
+                 <Descriptions bordered size="small" column={{
+                    xs: 1,
+                    sm: 1,
+                    md: 2,
+                    lg: 3,
+                    xl: 4,
+                    xxl: 4,
+                  }}>
+                   {Object.entries(product.Specifications).map(([key, value]) => (
+                     <Descriptions.Item key={key} label={key}>{String(value)}</Descriptions.Item>
+                   ))}
+                 </Descriptions>
+              ) : (
+                <Paragraph>Đang cập nhật...</Paragraph>
+              )}
+            </div>
+
+            <div className="mt-8">
+              {/* Đăng ký tư vấn button */}
               <Button
                 type="primary"
                 size="large"
-                disabled={product.Status === 'unavailable' || addingToCart}
-                onClick={handleAddToCart}
-                loading={addingToCart}
+                onClick={handleRegisterConsultation}
+                block // Make button full width
               >
-                Thêm vào giỏ hàng
+                Đăng ký tư vấn
               </Button>
-              {/* Test Drive button */}
-              <Button size="large" onClick={() => { /* TODO: Navigate to test drive form */ }}>
-                Đặt lịch lái thử
-              </Button>
-            </Space>
+              {product.Stock !== undefined && ( // Display stock if available
+                 <Typography.Text type="secondary" className="mt-2 block text-right">Còn {product.Stock} sản phẩm</Typography.Text>
+              )}
+            </div>
           </div>
         </div>
-
-        {product.Specifications && Object.keys(product.Specifications).length > 0 && (
-          <div className="product-detail-page__specifications" style={{ marginTop: '40px' }}>
-            <Title level={4}>Thông số kỹ thuật:</Title>
-            <Descriptions bordered column={{ xs: 1, sm: 2, md: 3 }}>
-              {Object.entries(product.Specifications).map(([key, value]) => (
-                <Descriptions.Item key={key} label={key}>{String(value)}</Descriptions.Item>
-              ))}
-            </Descriptions>
-          </div>
-        )}
-
-        {/* Add other sections like related products, reviews, etc. */}
-
-      </div>
+      </Card>
     </div>
   );
 };

@@ -1,15 +1,23 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Product } from '../../api/types';
 import { formatCurrency } from '../../utils/format';
 
 interface ProductCardProps {
   product: Product;
-  onViewDetail: () => void;
-  onAddToCart: (productId: string) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddToCart }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const navigate = useNavigate();
+
+  const handleViewDetail = () => {
+    navigate(`/san-pham/${product._id}`);
+  };
+
+  const handleRegisterTestDrive = () => {
+    navigate('/dat-hen-lai-thu');
+  };
+
   const unavailable = product.Status === 'unavailable';
 
   return (
@@ -50,11 +58,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetail, onAddT
         </div>
 
         <div className="product-card__actions">
-          <Link to={`/san-pham/${product._id}`} className="product-card__btn-detail" onClick={onViewDetail}>
+          <Link to={`/san-pham/${product._id}`} className="product-card__btn-detail" onClick={handleViewDetail}>
             Xem chi tiết
           </Link>
-          <button className="product-card__btn-add-to-cart" onClick={() => onAddToCart(product._id)} disabled={unavailable}>
-            Thêm vào giỏ hàng
+          <button className="product-card__btn-add-to-cart" onClick={handleRegisterTestDrive} disabled={unavailable}>
+            Đăng Ký Lái Thử
           </button>
         </div>
       </div>
