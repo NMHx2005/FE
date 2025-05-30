@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './components/admin/AdminLayout';
 import MainLayout from './components/layout/MainLayout';
+import ScrollToTop from './components/ScrollToTop';
 
 // Admin Pages
 import DashboardPage from './pages/admin/DashboardPage';
@@ -42,6 +43,7 @@ const App: React.FC = () => {
       <ConfigProvider locale={viVN}>
         <AuthProvider>
           <Router>
+            <ScrollToTop />
             <Routes>
               {/* Public Routes */}
               <Route element={<MainLayout />}>

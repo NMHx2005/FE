@@ -9,8 +9,11 @@ import { RootState } from '../../store';
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { items } = useSelector((state: RootState) => state.cart);
+  const cartState = useSelector((state: RootState) => state.cart);
+  const cart = cartState.cart;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const itemCount = cart?.items?.length || 0;
 
   const handleLogout = () => {
     logout();
@@ -70,9 +73,9 @@ const Header: React.FC = () => {
             
             <Link to="/cart" className="header__cart-link" onClick={closeMobileMenu}>
               <FaShoppingCart className="header__cart-icon" />
-              {items.length > 0 && (
+              {itemCount > 0 && (
                 <span className="header__cart-count">
-                  {items.length}
+                  {itemCount}
                 </span>
               )}
             </Link>

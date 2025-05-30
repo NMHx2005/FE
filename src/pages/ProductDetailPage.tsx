@@ -6,6 +6,10 @@ import { Product } from '../api/types'; // Import Product type
 import { Typography, Spin, Image as AntdImage, Descriptions, Space, Button, notification, Card, message } from 'antd';
 import { formatCurrency } from '../utils/format';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import './ProductDetailPage.scss';
+import { useDispatch } from 'react-redux';
+import { fetchCart } from '../store/slices/cartSlice';
+import { AppDispatch } from '../store';
 
 const { Title, Paragraph } = Typography;
 
@@ -17,6 +21,9 @@ const ProductDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false); // State for add to cart loading
+
+  // Get dispatch function with AppDispatch type
+  const dispatch: AppDispatch = useDispatch();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -51,21 +58,25 @@ const ProductDetailPage: React.FC = () => {
       }
 
       setAddingToCart(true);
-      await axios.post(`${API_BASE_URL}/gio-hang/${userId}/items`, {
-        ProductID: product?._id,
+      await axios.post(`${API_BASE_URL}/gio-hang/items`, {
+        productId: product?._id,
         quantity: 1,
-        Price: product?.Price || 0
       });
 
       notification.success({
         message: 'Thành công',
         description: 'Đã thêm sản phẩm vào giỏ hàng',
       });
+
+      dispatch(fetchCart());
+
     } catch (error) {
       console.error('Error adding to cart:', error);
+      // Hiển thị thông báo lỗi từ backend nếu có
+      const errorMessage = (error as any).response?.data?.message || 'Không thể thêm sản phẩm vào giỏ hàng';
       notification.error({
         message: 'Lỗi',
-        description: 'Không thể thêm sản phẩm vào giỏ hàng',
+        description: errorMessage,
       });
     } finally {
       setAddingToCart(false);
@@ -95,6 +106,17 @@ const ProductDetailPage: React.FC = () => {
 
   const allImages = product.List_Image ? [product.Main_Image, ...product.List_Image] : [product.Main_Image];
 
+  // Function to ensure base64 images have the correct prefix
+  const formatImageUrl = (url: string) => {
+    if (url && url.startsWith('data:image')) {
+      return url;
+    } else if (url) {
+      // Assuming JPEG for simplicity, you might need to detect image type
+      return `data:image/jpeg;base64,${url}`;
+    }
+    return '';
+  };
+
   const handlePrevImage = () => {
     setCurrentImageIndex((prev) =>
       prev === 0 ? allImages.length - 1 : prev - 1
@@ -108,29 +130,29 @@ const ProductDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card style={{ boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="product-detail__container">
+      <Card className="product-detail__card">
+        <div className="product-detail__grid">
           {/* Image Gallery */}
-          <div className="relative">
-            <div className="relative h-96 rounded-lg overflow-hidden">
+          <div className="product-detail__gallery">
+            <div className="product-detail__gallery-main">
               <AntdImage
-                src={allImages[currentImageIndex]}
+                src={formatImageUrl(allImages[currentImageIndex])}
                 alt={product.Product_Name}
-                className="w-full h-full object-cover"
+                className="product-detail__gallery-image"
                 preview={true}
               />
               {allImages.length > 1 && (
                 <>
                   <button
                     onClick={handlePrevImage}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 z-10"
+                    className="product-detail__gallery-nav product-detail__gallery-nav--prev"
                   >
                     <FaChevronLeft />
                   </button>
                   <button
                     onClick={handleNextImage}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 z-10"
+                    className="product-detail__gallery-nav product-detail__gallery-nav--next"
                   >
                     <FaChevronRight />
                   </button>
@@ -138,17 +160,18 @@ const ProductDetailPage: React.FC = () => {
               )}
             </div>
             {allImages.length > 1 && (
-              <div className="flex space-x-2 mt-4 overflow-x-auto">
+              <div className="product-detail__gallery-thumbnails">
                 {allImages.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}
-                    className={`w-20 h-20 rounded-md overflow-hidden flex-shrink-0 border-2 ${currentImageIndex === index ? 'border-primary-600' : 'border-transparent'}`}
+                    className={`product-detail__gallery-thumbnails-item ${
+                      currentImageIndex === index ? 'product-detail__gallery-thumbnails-item--active' : ''
+                    }`}
                   >
                     <img
-                      src={image}
+                      src={formatImageUrl(image)}
                       alt={`${product.Product_Name} - ${index + 1}`}
-                      className="w-full h-full object-cover"
                     />
                   </button>
                 ))}
@@ -157,50 +180,59 @@ const ProductDetailPage: React.FC = () => {
           </div>
 
           {/* Product Info */}
-          <div className="flex flex-col">
-            <Title level={2} className="!mt-0 mb-2">{product.Product_Name}</Title>
-            <Typography.Text strong className="text-2xl text-primary-600 mb-4">{formatCurrency(product.Price)}</Typography.Text>
+          <div className="product-detail__info">
+            <Title level={2} className="product-detail__info-title">{product.Product_Name}</Title>
+            <Typography.Text strong className="product-detail__info-price">{formatCurrency(product.Price)}</Typography.Text>
 
-            {/* Added vertical spacing between sections */}
-            <div className="mt-8">
-              <Title level={4} className="mb-2">Mô tả</Title>
+            <div className="product-detail__info-section">
+              <Title level={4} className="product-detail__info-section-title">Mô tả</Title>
               <Paragraph>{product.Description || 'Đang cập nhật...'}</Paragraph>
             </div>
 
-            <div className="mt-8">
-              <Title level={4} className="mb-2">Thông số kỹ thuật</Title>
+            <div className="product-detail__info-section">
+              <Title level={4} className="product-detail__info-section-title">Thông số kỹ thuật</Title>
               {product.Specifications && Object.keys(product.Specifications).length > 0 ? (
-                 <Descriptions bordered size="small" column={{
-                    xs: 1,
-                    sm: 1,
-                    md: 2,
-                    lg: 3,
-                    xl: 4,
-                    xxl: 4,
-                  }}>
-                   {Object.entries(product.Specifications).map(([key, value]) => (
-                     <Descriptions.Item key={key} label={key}>{String(value)}</Descriptions.Item>
-                   ))}
-                 </Descriptions>
+                <Descriptions bordered size="small" column={{
+                  xs: 1,
+                  sm: 1,
+                  md: 2,
+                  lg: 3,
+                  xl: 4,
+                  xxl: 4,
+                }}>
+                  {Object.entries(product.Specifications).map(([key, value]) => (
+                    <Descriptions.Item key={key} label={key}>{String(value)}</Descriptions.Item>
+                  ))}
+                </Descriptions>
               ) : (
                 <Paragraph>Đang cập nhật...</Paragraph>
               )}
             </div>
 
-            <div className="mt-8">
-              {/* Đăng ký tư vấn button */}
+            <div className="product-detail__info-buttons">
+              <Button
+                type="primary"
+                size="large"
+                onClick={handleAddToCart}
+                loading={addingToCart}
+                block
+              >
+                Thêm vào giỏ hàng
+              </Button>
               <Button
                 type="primary"
                 size="large"
                 onClick={handleRegisterConsultation}
-                block // Make button full width
+                block
               >
                 Đăng ký tư vấn
               </Button>
-              {product.Stock !== undefined && ( // Display stock if available
-                 <Typography.Text type="secondary" className="mt-2 block text-right">Còn {product.Stock} sản phẩm</Typography.Text>
-              )}
             </div>
+            {product.Stock !== undefined && (
+              <Typography.Text type="secondary" className="product-detail__info-stock">
+                Còn {product.Stock} sản phẩm
+              </Typography.Text>
+            )}
           </div>
         </div>
       </Card>

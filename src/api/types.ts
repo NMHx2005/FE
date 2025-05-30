@@ -99,4 +99,14 @@ export interface UpdateProductData {
   Stock?: number;
   Price?: number;
   Description?: string;
+}
+
+export interface Cart {
+  _id: string;
+  UserID: string;
+  items: CartItem[]; // Array of CartItem objects
+  Total_Amount: number;
+  Status: 'active' | 'completed' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
 } 

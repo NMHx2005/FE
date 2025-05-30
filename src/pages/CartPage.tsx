@@ -22,6 +22,7 @@ export interface CartItem {
   Unit_Price: number;
   Total_Price: number;
   Image: string;
+  priceAtOrder: number;
 }
 
 interface ShippingAddressData {
@@ -53,9 +54,9 @@ const CartPage: React.FC = () => {
 
       setLoading(true);
       try {
-        const response = await axios.get(`${API_BASE_URL}/gio-hang/${userId}`);
-        if (response.data && response.data.data && response.data.data.data && Array.isArray(response.data.data.data.data)) {
-          setCartItems(response.data.data.data.data);
+        const response = await axios.get(`${API_BASE_URL}/gio-hang/`);
+        if (response.data && response.data.data) {
+          setCartItems(response.data.data.items || []);
         } else {
           setCartItems([]);
           console.error('Unexpected cart data format:', response.data);
@@ -72,33 +73,31 @@ const CartPage: React.FC = () => {
     fetchCart();
   }, [userId]);
 
-  const handleUpdateQuantity = async (productId: string, newQuantity: number) => {
+  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      const itemToRemove = cartItems.find(item => item.ProductID._id === productId);
+      const itemToRemove = cartItems.find(item => item._id === itemId);
       if(itemToRemove) {
         handleRemoveItem(itemToRemove._id);
       }
       return;
     }
-    if (!userId) return;
+    if (!userId || !itemId) return;
 
-    const itemToUpdate = cartItems.find(item => item.ProductID._id === productId);
-    if (!itemToUpdate) return;
-
-    setUpdatingItemId(itemToUpdate._id);
+    setUpdatingItemId(itemId);
     try {
-      await axios.put(`${API_BASE_URL}/gio-hang/${userId}/muc/${itemToUpdate._id}`, { quantity: newQuantity });
-      setCartItems(prevItems =>
-        prevItems.map(item =>
-          item._id === itemToUpdate._id 
-            ? { ...item, quantity: newQuantity, Total_Price: newQuantity * item.Unit_Price }
-            : item
-        )
-      );
+      const response = await axios.put(`${API_BASE_URL}/gio-hang/items/${itemId}`, { quantity: newQuantity });
+      
+      if (response.data && response.data.data && response.data.data.items) {
+         setCartItems([...response.data.data.items]);
+      } else {
+         console.error('Unexpected response format after updating quantity:', response.data);
+      }
+
       message.success('Cập nhật số lượng thành công!');
     } catch (error) {
       console.error('Error updating cart item quantity:', error);
-      message.error('Không thể cập nhật số lượng sản phẩm.');
+      const errorMessage = (error as any).response?.data?.message || 'Không thể cập nhật số lượng sản phẩm.';
+      message.error(errorMessage);
     } finally {
       setUpdatingItemId(null);
     }
@@ -140,7 +139,7 @@ const CartPage: React.FC = () => {
     },
     {
       title: 'Giá',
-      dataIndex: 'Unit_Price',
+      dataIndex: 'priceAtOrder',
       key: 'price',
       render: (price: number) => formatCurrency(price),
     },
@@ -152,7 +151,7 @@ const CartPage: React.FC = () => {
         <InputNumber
           min={1}
           value={quantity}
-          onChange={(value) => handleUpdateQuantity(record.ProductID._id, value || 1)}
+          onChange={(value) => handleUpdateQuantity(record._id, value || 1)}
           disabled={updatingItemId === record._id}
         />
       ),
@@ -161,7 +160,7 @@ const CartPage: React.FC = () => {
       title: 'Tổng cộng',
       dataIndex: 'Total_Price',
       key: 'total',
-      render: (total: number) => formatCurrency(total),
+      render: (_: any, record: CartItem) => formatCurrency(record.priceAtOrder * record.quantity),
     },
     {
       title: 'Thao tác',
@@ -222,7 +221,7 @@ const CartPage: React.FC = () => {
         } catch (deleteError) {
           console.error('Error clearing cart after order:', deleteError);
         }
-        navigate('/don-hang');
+        navigate('/san-pham');
       } else {
         message.error(response.data.message || 'Đã xảy ra lỗi khi đặt hàng.');
       }
