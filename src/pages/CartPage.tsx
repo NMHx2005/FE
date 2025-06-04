@@ -55,11 +55,14 @@ const CartPage: React.FC = () => {
       setLoading(true);
       try {
         const response = await axios.get(`${API_BASE_URL}/gio-hang/`);
-        if (response.data && response.data.data) {
-          setCartItems(response.data.data.items || []);
+        if (response.data && response.data.data && response.data.data.items) {
+          setCartItems(response.data.data.items.map((item: CartItem) => ({
+            ...item,
+            key: item._id
+          })));
         } else {
           setCartItems([]);
-          console.error('Unexpected cart data format:', response.data);
+          console.error('Unexpected cart data format or no items:', response.data);
         }
       } catch (error) {
         console.error('Error fetching cart:', error);
@@ -81,16 +84,22 @@ const CartPage: React.FC = () => {
       }
       return;
     }
-    if (!userId || !itemId) return;
+    if (!userId || !itemId) {
+      console.warn('Không thể cập nhật số lượng: userId hoặc itemId bị thiếu', { userId, itemId });
+      return;
+    }
 
     setUpdatingItemId(itemId);
     try {
       const response = await axios.put(`${API_BASE_URL}/gio-hang/items/${itemId}`, { quantity: newQuantity });
-      
+      console.log(response.data);
       if (response.data && response.data.data && response.data.data.items) {
-         setCartItems([...response.data.data.items]);
+        setCartItems(response.data.data.items.map((item: CartItem) => ({
+          ...item,
+          key: item._id
+        })));
       } else {
-         console.error('Unexpected response format after updating quantity:', response.data);
+        console.error('Unexpected response format after updating quantity or no items:', response.data);
       }
 
       message.success('Cập nhật số lượng thành công!');
@@ -104,7 +113,10 @@ const CartPage: React.FC = () => {
   };
 
   const handleRemoveItem = async (itemId: string) => {
-    if (!userId || !itemId) return;
+    if (!userId || !itemId) {
+      console.warn('Không thể xóa sản phẩm: userId hoặc itemId bị thiếu', { userId, itemId });
+      return;
+    }
 
     setUpdatingItemId(itemId);
     try {
@@ -113,6 +125,11 @@ const CartPage: React.FC = () => {
       message.success('Đã xóa sản phẩm khỏi giỏ hàng!');
     } catch (error) {
       console.error('Error removing cart item:', error);
+      if ((error as any).response) {
+        console.error('Error response data:', (error as any).response.data);
+        console.error('Error response status:', (error as any).response.status);
+        console.error('Error response headers:', (error as any).response.headers);
+      }
       message.error('Không thể xóa sản phẩm khỏi giỏ hàng.');
     } finally {
       setUpdatingItemId(null);
@@ -121,7 +138,7 @@ const CartPage: React.FC = () => {
 
   // Calculate total amount
   const totalAmount = cartItems.reduce(
-    (sum, item) => sum + item.Total_Price,
+    (sum, item) => sum + (item.priceAtOrder * item.quantity),
     0
   );
 
@@ -130,8 +147,8 @@ const CartPage: React.FC = () => {
       title: 'Sản phẩm',
       dataIndex: 'ProductID',
       key: 'product',
-      render: (product: CartItem['ProductID']) => (
-        <Space>
+      render: (product: CartItem['ProductID'], record: CartItem) => (
+        <Space key={record._id}>
           <AntdImage src={product.Main_Image} alt={product.Product_Name} width={50} />
           <Link to={`/san-pham/${product._id}`}>{product.Product_Name}</Link>
         </Space>
@@ -149,6 +166,7 @@ const CartPage: React.FC = () => {
       key: 'quantity',
       render: (quantity: number, record: CartItem) => (
         <InputNumber
+          key={record._id}
           min={1}
           value={quantity}
           onChange={(value) => handleUpdateQuantity(record._id, value || 1)}
@@ -167,6 +185,7 @@ const CartPage: React.FC = () => {
       key: 'action',
       render: (_: any, record: CartItem) => (
         <Button
+          key={record._id}
           danger
           icon={<DeleteOutlined />}
           onClick={() => handleRemoveItem(record._id)}
@@ -236,7 +255,7 @@ const CartPage: React.FC = () => {
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Spin size="large" tip="Đang tải giỏ hàng..." spinning={loading} />
+        <Spin size="large" spinning={loading} />
       </div>
     );
   }
