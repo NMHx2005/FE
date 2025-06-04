@@ -104,18 +104,8 @@ const ProductDetailPage: React.FC = () => {
     );
   }
 
+  // Combine main image and list images without formatting or filtering
   const allImages = product.List_Image ? [product.Main_Image, ...product.List_Image] : [product.Main_Image];
-
-  // Function to ensure base64 images have the correct prefix
-  const formatImageUrl = (url: string) => {
-    if (url && url.startsWith('data:image')) {
-      return url;
-    } else if (url) {
-      // Assuming JPEG for simplicity, you might need to detect image type
-      return `data:image/jpeg;base64,${url}`;
-    }
-    return '';
-  };
 
   const handlePrevImage = () => {
     setCurrentImageIndex((prev) =>
@@ -137,7 +127,7 @@ const ProductDetailPage: React.FC = () => {
           <div className="product-detail__gallery">
             <div className="product-detail__gallery-main">
               <AntdImage
-                src={formatImageUrl(allImages[currentImageIndex])}
+                src={allImages[currentImageIndex]} // Use the raw URL from the combined list
                 alt={product.Product_Name}
                 className="product-detail__gallery-image"
                 preview={true}
@@ -165,12 +155,10 @@ const ProductDetailPage: React.FC = () => {
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}
-                    className={`product-detail__gallery-thumbnails-item ${
-                      currentImageIndex === index ? 'product-detail__gallery-thumbnails-item--active' : ''
-                    }`}
+                    className={`product-detail__gallery-thumbnails-item ${currentImageIndex === index ? 'product-detail__gallery-thumbnails-item--active' : ''}`}
                   >
                     <img
-                      src={formatImageUrl(image)}
+                      src={image} // Use the raw URL from the list
                       alt={`${product.Product_Name} - ${index + 1}`}
                     />
                   </button>
